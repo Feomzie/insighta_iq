@@ -99,12 +99,12 @@ def parse_natural_query (q: str) -> ParsedQuery:
 
     above_match = re.search(r"\b(?:above|over|older than|at least|minimum)\s+(\d+)\b", text)
     if above_match:
-        result.min_age = int(above_match.group(1))
+        result.min_age = int(above_match.group(1)) + 1
         result.has_any_filters = True
 
     below_match = re.search(r"\b(?:below|under|younger than|at most|maximym)\s+(\d+)\b", text)
     if below_match:
-        result.max_age = int(below_match.group(1))
+        result.max_age = int(below_match.group(1)) - 1
         result.has_any_filters = True
 
     # Age group keywords
