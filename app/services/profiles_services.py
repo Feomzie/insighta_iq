@@ -7,44 +7,53 @@ from app.services.nlp_parser import parse_natural_query, ParsedQuery
 
 VALID_SORT_FIELDS = {"age", "created_at", "gender_probability"}
 VALID_ORDERS = {"asc", "desc"}
-VALID_AGE_GROUPS = {"child", "young adult", "adult", "senior"}
+VALID_AGE_GROUPS = {"child", "teenager", "adult", "senior"}
 VALID_GENDERS = {"male", "female"}
 
 
 class QueryValidationError(Exception):
-    def __init__(self, message: str, status_code: int = 400):
-        self.message = message
-        self.status_code = status_code
-        super().__init__(message)
+	def __init__(self, message: str, status_code: int = 400):
+		self.message = message
+		self.status_code = status_code
+		super().__init__(message)
 
 
 def _apply_filter(
-        query,
-        gender: Optional[str] = None,
-        age_group: Optional[str] = None,
-        country_id: Optional[str] = None,
-        min_age: Optional[int] = None,
-        max_age: Optional[int] = None,
-        min_gender_probability: Optional[float] = None,
+	query,
+	gender: Optional[str] = None,
+	age_group: Optional[str] = None,
+	country_id: Optional[str] = None,
+	min_age: Optional[int] = None,
+	max_age: Optional[int] = None,
+	min_gender_probability: Optional[float] = None,
+	min_country_probability: Optional[float] = None
 ):
-    if gender is not None:
-        if gender not in VALID_GENDERS:
-            raise QueryValidationError("Invalid value for 'gender'. Must be one of: male, female", 422)
-        query = query.filter(Profile.gender == gender)
+	if gender is not None:
+		if gender not in VALID_GENDERS:
+			raise QueryValidationError("Invalid value for 'gender'. Must be 'male' or 'female'.", 422)
+		query = query.filter(Profile.gender == gender)
 
-    if age_group is not None:
-        if age_group not in VALID_AGE_GROUPS:
-            raise QueryValidationError(
-                "Invalid value for 'age_group'. Must be one of: child, young adult, adult, senior", 422)
-        query = query.filter(Profile.age_group == age_group)
+	if age_group is not None:
+		if age_group not in VALID_AGE_GROUPS:
+			raise QueryValidationError("Invalid value for 'age_group'. Must be one of: child, teenager, adult, senior", 422)
+		query = query.filter(Profile.age_group == age_group)
 
-    if country_id is not None:
-        query = query.filter(Profile.age >= min_age)
+	if country_id is not None:
+		query = query.filter(func.upper(Profile.country_id) == country_id.upper())
 
-    if min_gender_probability is not None:
-        query = query.filter(Profile.gender_probability >= min_gender_probability)
+	if min_age is not None:
+		query = query.filter(Profile.age >= min_age)
 
-    return query
+	if max_age is not None:
+		query = query.filter(Profile.age <= max_age)
+
+	if min_gender_probability is not None:
+		query = query.filter(Profile.gender_probability >= min_gender_probability)
+	
+	if min_country_probability is not None:
+		query = query.filter(Profile.country_probability >= min_country_probability)
+	
+	return query
 
 
 def _apply_sorting(query, sort_by: Optional[str], order: Optional[str]):
@@ -66,14 +75,14 @@ def _apply_sorting(query, sort_by: Optional[str], order: Optional[str]):
 
 
 def _apply_pagination(query, page: int, limit: int) -> Tuple[int, list]:
-    if page < 1:
-        raise QueryValidationError("'page' must be a positive integer", 422)
-    if limit < 1 or limit > 50:
-        raise QueryValidationError("'limit' must be between 1 and 50", 422)
-    
-    total = query.count()
-    results = query.offset((page - 1) * limit).limit(limit).all()
-    return total, results
+	if page < 1:
+		raise QueryValidationError("'page' must be a positive integer.", 422)
+	if limit < 1 or limit > 50:
+		raise QueryValidationError("'limit' must be between 1 and 50", 422)
+	
+	total = query.count()
+	results = query.offset((page - 1) * limit).limit(limit).all()
+	return total, results
 
 
 def get_profiles(
@@ -90,13 +99,14 @@ def get_profiles(
 	page: int = 1,
 	limit: int = 10,
 ):
-    query = db.query(Profile)
-    query = _apply_filter(
-        query, gender, age_group, country_id, min_age, max_age, min_gender_probability, min_country_probability
-    )
-    query = _apply_sorting(query, sort_by, order)
-    total, results = _apply_pagination(query, page, limit)
-    return total, results
+	query = db.query(Profile)
+	query = _apply_filter(
+		query, gender, age_group, country_id, min_age, max_age, min_gender_probability, min_country_probability
+	)
+	query = _apply_sorting(query, sort_by, order)
+	total, results = _apply_pagination(query, page, limit)
+	return total, results
+
 
 def search_profiles_nlp(
 	db: Session,
