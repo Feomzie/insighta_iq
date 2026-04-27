@@ -4,7 +4,7 @@ from typing import Optional, List
 
 
 class ProfileOut(BaseModel):
-    id: int
+    id: str
     name: str
     gender: str
     gender_probability: float
