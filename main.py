@@ -5,6 +5,11 @@ from fastapi.exceptions import RequestValidationError
 
 from app.config.settings import settings
 from app.routes.profile_route import router as profiles_router
+from app.routes.auth_routes import router as auth_router
+from app.middleware.rate_limit import rate_limit_middleware
+from app.middleware.logging import logging_middleware
+
+from starlette.exceptions import HTTPException as StarletteHTTPException
 
 app = FastAPI(
 	title="Insighta IQ"
@@ -19,6 +24,10 @@ app.add_middleware(
 )
 
 
+app.middleware("http")(rate_limit_middleware)
+
+app.middleware("http")(logging_middleware)
+
 
 @app.exception_handler(RequestValidationError)
 async def validation_exception_handler(request: Request, exc: RequestValidationError):
@@ -32,7 +41,7 @@ async def validation_exception_handler(request: Request, exc: RequestValidationE
 async def not_found_handler(request: Request, exc):
 	return JSONResponse(
 		status_code=404,
-		content={"status": "error", "message": "Profile not found"},
+		content={"status": "error", "message": "Resource not found"},
 	)
 
 
@@ -43,7 +52,15 @@ async def server_error_handler(request: Request, exc):
 		content={"status": "error", "message": "Internal server error"},
 	)
 
-
+@app.exception_handler(StarletteHTTPException)
+async def custom_http_exception_handler(request: Request, exc: StarletteHTTPException):
+	if isinstance(exc.detail, dict):
+		return JSONResponse(status_code=exc.status_code, content=exc.detail)
+	
+	return JSONResponse(
+		status_code=exc.status_code,
+		content={"status": "error", "message": str(exc.detail)},
+	)
 
 @app.exception_handler(Exception)
 async def http_exception_handler(request: Request, exc):
@@ -61,6 +78,7 @@ async def http_exception_handler(request: Request, exc):
 	)
 
 
+app.include_router(auth_router)
 app.include_router(profiles_router)
 
 
