@@ -1,7 +1,5 @@
 from fastapi import Depends
 from fastapi import FastAPI, Request
-from fastapi.templating import Jinja2Templates
-from fastapi.staticfiles import StaticFiles
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import JSONResponse, HTMLResponse
 from fastapi.exceptions import RequestValidationError
@@ -30,7 +28,6 @@ app.add_middleware(
 	allow_origin_regex=".*",
 )
 
-app.mount("/static", StaticFiles(directory="static"), name="static")
 
 app.middleware("http")(rate_limit_middleware)
 
