@@ -1,50 +1,48 @@
-import json
+from app.db.database import SessionLocal
+from app.models.user_models import User
+from app.utils.tokens import create_access_token, create_refresh_token
 from uuid_extensions import uuid7str
-from sqlalchemy.orm import Session
-from app.db.database import SessionLocal, engine
-from app.models.profile_models import Profile  # Assuming your model is in app/models.py
+from datetime import datetime, timezone
 
-def seed_database():
-	with open('seed_profiles.json', 'r') as f:
-		data = json.load(f)
-	
-	profiles_data = data.get("profiles", [])
-	
-	# 2. Create a database session
-	db = SessionLocal()
-	
-	try:
-		print(f"Seeding {len(profiles_data)} profiles...")
-		
-		for p in profiles_data:
-			# Check if profile already exists by name to avoid UniqueConstraint errors
-			exists = db.query(Profile).filter(Profile.name == p['name']).first()
-			if exists:
-				continue
+def main():
+    db = SessionLocal()
 
-			new_profile = Profile(
-				id=uuid7str(),
-				name=p['name'],
-				gender=p['gender'],
-				gender_probability=p['gender_probability'],
-				age=p['age'],
-				age_group=p['age_group'],
-				country_id=p['country_id'],
-				country_name=p['country_name'],
-				country_probability=p['country_probability']
-				# created_at is handled by server_default=func.now()
-			)
-			db.add(new_profile)
-		
-		# 4. Commit the changes
-		db.commit()
-		print("Database seeded successfully!")
-		
-	except Exception as e:
-		print(f"Error seeding database: {e}")
-		db.rollback()
-	finally:
-		db.close()
+    def seed_and_get_tokens(username, email, role, github_id):
+        # Look for existing user by role
+        user = db.query(User).filter(User.role == role).first()
+        
+        if not user:
+            user = User(
+                id=uuid7str(),
+                github_id=github_id,
+                username=username,
+                email=email,
+                role=role,
+                is_active=True,
+                last_login_at=datetime.now(timezone.utc),
+            )
+            db.add(user)
+            db.commit()
+            db.refresh(user)
+            print(f"Created new {role} user!")
+        else:
+            print(f"Found existing {role} user.")
+
+        # Generate fresh tokens
+        access_token = create_access_token(user)
+        refresh_token = create_refresh_token(db, user.id)
+        
+        print(f"\n--- {role.upper()} TOKENS ---")
+        print(f"Access Token ({role}):\n{access_token}")
+        if role == "admin":
+            print(f"\nRefresh Token (admin):\n{refresh_token}")
+        print("-" * 30)
+
+    print("Seeding Admin...")
+    seed_and_get_tokens("admin_user", "admin@insighta.com", "admin", "admin_github_001")
+    
+    print("\nSeeding Analyst...")
+    seed_and_get_tokens("analyst_user", "analyst@insighta.com", "analyst", "analyst_github_002")
 
 if __name__ == "__main__":
-	seed_database()
+    main()
