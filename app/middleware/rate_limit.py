@@ -7,7 +7,7 @@ from app.config.settings import settings
 # In-memory store
 request_store = {}
 
-AUTH_LIMIT = 100
+AUTH_LIMIT = 15
 DEFAULT_LIMIT = 100
 WINDOW = 60  # seconds
 
