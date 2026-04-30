@@ -1,10 +1,16 @@
+from fastapi import Depends
 from fastapi import FastAPI, Request
+from fastapi.templating import Jinja2Templates
+from fastapi.staticfiles import StaticFiles
 from fastapi.middleware.cors import CORSMiddleware
-from fastapi.responses import JSONResponse
+from fastapi.responses import JSONResponse, HTMLResponse
 from fastapi.exceptions import RequestValidationError
 
 from app.config.settings import settings
-from app.routes.profile_route import router as profiles_router
+from app.routes.profile_routes import router as profiles_router
+from app.models.user_models import User
+from app.middleware.auth_middleware import get_current_user
+from app.routes.user_routes import router as user_router
 from app.routes.auth_routes import router as auth_router
 from app.middleware.rate_limit import rate_limit_middleware
 from app.middleware.logging import logging_middleware
@@ -17,12 +23,12 @@ app = FastAPI(
 
 app.add_middleware(
 	CORSMiddleware,
-	allow_origins=["*"],
+	allow_origins=['*'],
 	allow_methods=["*"],
 	allow_headers=["*"],
 	allow_credentials=True,
+	allow_origin_regex=".*",
 )
-
 
 app.middleware("http")(rate_limit_middleware)
 
@@ -80,6 +86,7 @@ async def http_exception_handler(request: Request, exc):
 
 app.include_router(auth_router)
 app.include_router(profiles_router)
+app.include_router(user_router)
 
 
 @app.get("/", tags=["health"])
