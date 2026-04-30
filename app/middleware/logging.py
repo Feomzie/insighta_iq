@@ -1,34 +1,22 @@
-from fastapi import APIRouter, Request, Depends, HTTPException
-from fastapi.responses import HTMLResponse, RedirectResponse
-from fastapi.templating import Jinja2Templates
-from sqlalchemy.orm import Session
-from app.db.database import get_db
-from app.middleware.auth_middleware import get_current_user
-from app.models.user_models import User
-from typing import Optional
+import time
+import logging
+from fastapi import Request
 
-router = APIRouter(tags=["web-portal"])
-templates = Jinja2Templates(directory="templates")
+logging.basicConfig(level=logging.INFO)
+logger = logging.getLogger("app")
 
-# Public Route
-@router.get("/", response_class=HTMLResponse)
-async def login_page(request: Request):
-    # If user already has a valid token, redirect to dashboard
-    return templates.TemplateResponse(request=request, name="login.html")
 
-# Protected Routes
-@router.get("/dashboard", response_class=HTMLResponse)
-async def dashboard_page(request: Request, user: User = Depends(get_current_user)):
-    return templates.TemplateResponse(request=request, name="dashboard.html", context={"user": user})
+async def logging_middleware(request: Request, call_next):
+	start_time = time.time()
 
-@router.get("/web/profiles", response_class=HTMLResponse)
-async def profiles_list_page(request: Request, user: User = Depends(get_current_user)):
-    return templates.TemplateResponse(request=request, name="profiles.html", context={"user": user})
+	response = await call_next(request)
 
-@router.get("/web/profiles/{profile_id}", response_class=HTMLResponse)
-async def profile_detail_page(request: Request, profile_id: str, user: User = Depends(get_current_user)):
-    return templates.TemplateResponse(request=request, name="profile_detail.html", context={"user": user, "profile_id": profile_id})
+	process_time = (time.time() - start_time) * 1000
 
-@router.get("/web/account", response_class=HTMLResponse)
-async def account_page(request: Request, user: User = Depends(get_current_user)):
-    return templates.TemplateResponse(request=request, name="account.html", context={"user": user})
+	logger.info(
+		f"{request.method} {request.url.path} "
+		f"{response.status_code} "
+		f"{process_time:.2f}ms"
+	)
+
+	return response
