@@ -127,3 +127,4 @@ def parse_natural_query(q: str) -> ParsedQuery:
 		result.valid = False
 
 	return result
+
