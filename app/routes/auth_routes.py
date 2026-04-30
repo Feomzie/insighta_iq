@@ -15,6 +15,9 @@ from app.models.user_models import User
 
 router = APIRouter(prefix="/auth", tags=["auth"])
 
+# ---------------------------------------------------------------------------
+# Browser OAuth flow
+# ---------------------------------------------------------------------------
 
 @router.get("/github")
 def github_login(
