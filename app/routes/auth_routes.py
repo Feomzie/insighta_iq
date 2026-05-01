@@ -9,7 +9,7 @@ from app.config.settings import settings
 from app.db.database import get_db
 from app.schemas.user_schema import UserResponse
 from app.services.auth_services import build_github_auth_url, handle_oauth_callback, generate_pkce_pair
-from app.middlewares.auth_middleware import get_current_user
+from app.middleware.auth_middleware import get_current_user
 from app.utils.tokens import rotate_refresh_token, revoke_refresh_token, create_access_token, create_refresh_token
 from app.models.user_models import User
 
